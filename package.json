@@ -1,0 +1,14 @@
+{
+  "name": "@local/dsh-error-retry",
+  "version": "1.2.2",
+  "private": true,
+  "repository": { "type": "git", "url": "git+https://github.com/librola/dsh-error-retry.git" },
+  "type": "module",
+  "description": "按关键词或有界正则规则匹配模型错误并无限重试，可随时停止",
+  "exports": { ".": "./index.js", "./package.json": "./package.json", "./client": "./client.js", "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },
+  "files": ["index.js", "client.js", "cordis.patch.yml", "README.md", "locale/*.json", "icon.svg"],
+  "scripts": { "test": "node --test tests/*.test.js" },
+  "dependencies": { "zod": "^4.1.0", "@deepseek-ai/schemastery": "~3.18.5" },
+  "peerDependencies": { "@deepseek-ai/dsh": "0.2.0-rc.2 || 0.2.1-rc.1 || 0.2.1-rc.2" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" }, "client": { "platform": "web", "immediately": true, "inject": ["@deepseek-ai/dsh-client-ui-plugin-manager", "@deepseek-ai/dsh-client-ui-settings"] } }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Retry Rules",
+    "description": "Configure keywords, sentences and regex rules in Plugins to retry matching model errors indefinitely, with backoff and cancellation."
+  }
+}
