@@ -10,7 +10,7 @@ test('包名、客户端模块、插件页与配置命名空间保持一致', ()
   const lock = JSON.parse(read('package-lock.json'));
   const client = read('client.js');
   const patch = read('cordis.patch.yml');
-  assert.equal(manifest.name, '@local/dsh-error-retry');
+  assert.equal(manifest.name, 'dsh-error-retry');
   assert.equal(lock.name, manifest.name);
   assert.equal(lock.packages[''].name, manifest.name);
   assert.equal(lock.version, manifest.version);

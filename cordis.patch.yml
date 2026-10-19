@@ -1,5 +1,5 @@
 - insert:
     - id: error-retry
-      name: '@local/dsh-error-retry'
+      name: 'dsh-error-retry'
       config:
         rules: []

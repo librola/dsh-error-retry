@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: '@local/dsh-error-retry',
+  id: 'dsh-error-retry',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
@@ -107,7 +107,7 @@ window.__ModuleLoader__.load({
         ctx.effect(() => ctx.locale.register(NS, dictionaries));
         const form = ctx.configForms.get('error-retry');
         ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
-          name: 'plugins.bundle.config', key: '@local/dsh-error-retry', locale: NS,
+          name: 'plugins.bundle.config', key: 'dsh-error-retry', locale: NS,
         }, props => h(Editor, { form, t: props.t })));
       },
     };

@@ -6,19 +6,19 @@
 
 ## 安装
 
-在 DSH 插件管理器中安装 Git 仓库：
-
-```text
-https://github.com/librola/dsh-error-retry
-```
-
-也可以克隆仓库后，使用插件管理器安装本地目录的绝对路径：
+从 npm 安装（把 `web` 换成你要安装的 profile 名称）：
 
 ```sh
-git clone https://github.com/librola/dsh-error-retry.git
+dsh plugin --profile web add dsh-error-retry
 ```
 
-包名为 `@local/dsh-error-retry`。按插件管理器的安装结果刷新网页或重启 DSH；不要把源码更新等同于运行版本已更新。
+也可以在 DSH 插件管理器里按包名 `dsh-error-retry` 安装，或从 Git 仓库安装：
+
+```sh
+dsh plugin --profile web add git+https://github.com/librola/dsh-error-retry.git
+```
+
+按插件管理器的安装结果刷新网页或重启 DSH；不要把源码更新等同于运行版本已更新。
 
 ## 在插件详情页配置
 
