@@ -1,6 +1,6 @@
 {
   "name": "dsh-error-retry",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "repository": { "type": "git", "url": "git+https://github.com/librola/dsh-error-retry.git" },
   "type": "module",
   "description": "按关键词或有界正则规则匹配模型错误并无限重试，可随时停止",

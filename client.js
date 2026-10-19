@@ -10,6 +10,8 @@ window.__ModuleLoader__.load({
         risk: '宽泛规则或永久错误可能产生持续请求和费用。保存仅影响下一次错误判定；已经排定的等待仍会完成一次重试，可点击会话停止按钮取消。',
         add: '添加规则', remove: '删除规则', mode: '匹配方式', contains: '包含关键词／句子', regex: '正则表达式', pattern: '关键词、句子或正则', flags: '正则标志（i/m/s/u）',
         save: '保存规则', saving: '保存中…', saved: '已保存，下一次错误判定使用新规则。', discard: '放弃修改并读取最新配置',
+        exportRules: '导出规则', exported: '规则已导出。', exportFailed: '导出失败：',
+        importRules: '导入规则', imported: '已导入，请确认后点击保存规则。', importFailed: '导入失败：',
         unavailable: '配置尚未就绪。请确认插件已启用并已重启加载新版。', loading: '读取配置中…', readonly: '当前配置只读。',
         conflict: '配置已被其他页面修改，未覆盖远端。草稿已保留，请放弃草稿读取最新配置后重新编辑。',
         rejected: '保存被拒绝，草稿已保留。请检查规则或重新读取最新配置。', invalid: '规则无效：', empty: '尚无规则，本插件不会接管任何错误。',
@@ -19,6 +21,8 @@ window.__ModuleLoader__.load({
         risk: 'Broad rules or permanent failures may produce ongoing requests and costs. Saving affects the next error decision; an already scheduled wait still completes one retry. Use the session Stop button to cancel.',
         add: 'Add rule', remove: 'Remove rule', mode: 'Match mode', contains: 'Contains keyword / sentence', regex: 'Regular expression', pattern: 'Keyword, sentence or pattern', flags: 'Regex flags (i/m/s/u)',
         save: 'Save rules', saving: 'Saving…', saved: 'Saved. New rules apply to the next error decision.', discard: 'Discard edits and load latest values',
+        exportRules: 'Export rules', exported: 'Rules exported.', exportFailed: 'Export failed: ',
+        importRules: 'Import rules', imported: 'Imported. Review the rules, then click Save rules.', importFailed: 'Import failed: ',
         unavailable: 'Configuration is unavailable. Enable the plugin and restart to load the new version.', loading: 'Loading configuration…', readonly: 'Configuration is read-only.',
         conflict: 'Another page changed this configuration. Remote values were not overwritten and your draft was kept. Discard it and edit the latest values.',
         rejected: 'Save was rejected; your draft was kept. Check rules or reload the latest values.', invalid: 'Invalid rule: ', empty: 'No rules; this plugin will not handle any errors.',
@@ -36,6 +40,39 @@ window.__ModuleLoader__.load({
       return rules.map(rule => rule.mode === 'contains'
         ? { mode: rule.mode, pattern: rule.pattern }
         : { mode: rule.mode, pattern: rule.pattern, flags: rule.flags ?? '' });
+    }
+    const RULES_FILE_NAME = 'dsh-error-retry-rules.json';
+    // 规则文件很小；限制读取长度，避免异常文件拖垮页面。
+    const MAX_IMPORT_CHARS = 1024 * 1024;
+    function serializeRules(rules) {
+      // 导出只包含规则本身，不带草稿、revision 等页面状态。
+      return { version: 1, rules: rules.map(rule => rule.mode === 'regex'
+        ? { mode: 'regex', pattern: rule.pattern, flags: rule.flags ?? '' }
+        : { mode: 'contains', pattern: rule.pattern }) };
+    }
+    function parseRulesFile(text) {
+      if (typeof text !== 'string' || text.length > MAX_IMPORT_CHARS) throw new Error('文件过大（超过 1 MiB）');
+      let data;
+      try { data = JSON.parse(text); }
+      catch (cause) { throw new Error(`JSON 解析失败：${cause.message}`); }
+      const raw = Array.isArray(data) ? data : data !== null && typeof data === 'object' ? data.rules : undefined;
+      if (!Array.isArray(raw)) throw new Error('内容必须包含 rules 数组');
+      const rules = raw.map((rule, index) => {
+        const label = `规则 ${index + 1}`;
+        if (rule === null || typeof rule !== 'object' || Array.isArray(rule)) throw new Error(`${label}：必须是对象`);
+        if (rule.mode !== 'contains' && rule.mode !== 'regex') throw new Error(`${label}：mode 必须是 contains 或 regex`);
+        if (typeof rule.pattern !== 'string') throw new Error(`${label}：pattern 必须是字符串`);
+        if (rule.flags !== undefined && typeof rule.flags !== 'string') throw new Error(`${label}：flags 必须是字符串`);
+        if (rule.mode === 'contains' && rule.flags !== undefined) throw new Error(`${label}：contains 不接受 flags`);
+        return rule.mode === 'regex'
+          ? { mode: 'regex', pattern: rule.pattern, flags: rule.flags ?? '' }
+          : { mode: 'contains', pattern: rule.pattern };
+      });
+      return validate(rules);
+    }
+    // 导入只生成新草稿，不写配置；保存仍由用户手动触发。
+    function importRulesIntoDraft(text, revision) {
+      return { rules: parseRulesFile(text), revision };
     }
     const css = `
 .error-retry-config{display:grid;gap:14px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.5}
@@ -55,6 +92,7 @@ window.__ModuleLoader__.load({
       const [saving, setSaving] = React.useState(false);
       const [message, setMessage] = React.useState('');
       const [error, setError] = React.useState('');
+      const fileInput = React.useRef(null);
       const mounted = React.useRef(true);
       React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
       const rules = draft?.rules ?? state.value?.rules ?? [];
@@ -63,6 +101,32 @@ window.__ModuleLoader__.load({
       function change(next) {
         setDraft({ rules: next, revision: draft?.revision ?? state.revision });
         setError(''); setMessage('');
+      }
+      function exportRules() {
+        try {
+          const blob = new Blob([JSON.stringify(serializeRules(rules), null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = RULES_FILE_NAME;
+          link.click();
+          // click() 已同步取走内容，立即释放即可；链接不挂到页面上。
+          URL.revokeObjectURL(url);
+          setError(''); setMessage(t('exported'));
+        } catch (cause) { setError(t('exportFailed') + cause.message); }
+      }
+      async function importFile(event) {
+        const file = event.target.files && event.target.files[0];
+        // 清空选择，允许再次导入同一个文件。
+        event.target.value = '';
+        if (!file) return;
+        try {
+          if (file.size > MAX_IMPORT_CHARS) throw new Error('文件过大（超过 1 MiB）');
+          const text = await file.text();
+          // 只有解析和校验都成功才替换草稿；失败时保留原草稿。
+          setDraft(importRulesIntoDraft(text, draft?.revision ?? state.revision));
+          setError(''); setMessage(t('imported'));
+        } catch (cause) { setMessage(''); setError(t('importFailed') + cause.message); }
       }
       async function save(event) {
         event.preventDefault();
@@ -96,8 +160,11 @@ window.__ModuleLoader__.load({
         conflict ? h('p', { role: 'alert' }, t('conflict')) : null,
         error ? h('p', { role: 'alert' }, error) : null,
         message ? h('p', { role: 'status' }, message) : null,
+        h('input', { ref: fileInput, type: 'file', accept: '.json,application/json', style: { display: 'none' }, onChange: importFile }),
         h('div', { className: 'error-retry-actions' },
           h('button', { type: 'button', disabled, onClick: () => change([...rules, { mode: 'contains', pattern: '' }]) }, t('add')),
+          h('button', { type: 'button', disabled: state.status !== 'ready' || saving, onClick: exportRules }, t('exportRules')),
+          h('button', { type: 'button', disabled, onClick: () => { setError(''); setMessage(''); if (fileInput.current) fileInput.current.click(); } }, t('importRules')),
           h('button', { type: 'submit', className: 'error-retry-save', disabled: disabled || !draft || conflict }, t(saving ? 'saving' : 'save')),
           draft ? h('button', { type: 'button', disabled: saving, onClick: () => { setDraft(null); setError(''); setMessage(''); } }, t('discard')) : null));
     }

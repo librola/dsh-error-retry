@@ -44,6 +44,28 @@ rules:
 
 规则持久化到当前 profile。保存后的规则从**下一次错误判定**生效，不取消已经排定的等待；立即停止当前请求请使用会话的停止按钮。
 
+## 导入与导出规则
+
+详情页底部提供两个按钮：
+
+- **导出规则**：把当前编辑中的规则（含未保存的草稿）下载为 `dsh-error-retry-rules.json`，内容形如：
+
+  ```json
+  {
+    "version": 1,
+    "rules": [
+      { "mode": "contains", "pattern": "Temporary service unavailable." },
+      { "mode": "regex", "pattern": "^Request rate limit exceeded\\.", "flags": "i" }
+    ]
+  }
+  ```
+
+- **导入规则**：选择 JSON 文件后，接受上面的对象格式，也接受直接给出规则数组的裸数组格式。导入会用与保存相同的规则校验：空内容、非法正则、非法 flags（`contains` 不允许 flags）都会被拒绝并显示具体原因；失败时不会改动现有草稿。
+
+导入成功只写入**草稿**，不会自动保存；确认无误后仍需点击“保存规则”。导入同样遵循页面的配置冲突提示，其他页面改动过配置时不会静默覆盖。
+
+规则文件只是本地 JSON，不包含凭据或机器信息，可以安全地复制到另一台机器或另一份 profile 使用。
+
 ## 行为与范围
 
 - 仅匹配 DSH Agent 模型请求的 `failure.message`，不按 HTTP 状态码泛匹配。
